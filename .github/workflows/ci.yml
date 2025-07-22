@@ -1,0 +1,68 @@
+name: Java Autograding - Assignment 1
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-grade:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Compile Java program
+      run: javac task1/CSVReaderPreview.java
+
+    - name: Run the program and capture output
+      run: |
+        mkdir -p output
+        java task1.CSVReaderPreview > output/result.txt
+
+    - name: Initialize grading variables
+      id: grading
+      run: |
+        points_available=5
+        points_awarded=0
+
+        # Test 1: Check header
+        if grep -q "=== Data Preview ===" output/result.txt; then
+          points_awarded=$((points_awarded+1))
+        fi
+
+        # Test 2: Check column count
+        if grep -q "Total Columns: 3" output/result.txt; then
+          points_awarded=$((points_awarded+1))
+        fi
+
+        # Test 3: Check sample data (John)
+        if grep -q "John" output/result.txt; then
+          points_awarded=$((points_awarded+3))
+        fi
+
+        echo "points_awarded=$points_awarded" >> $GITHUB_ENV
+        echo "points_available=$points_available" >> $GITHUB_ENV
+
+    - name: Display grading result
+      run: |
+        echo "Points Awarded: $points_awarded / $points_available"
+
+    - name: Add summary for GitHub Actions UI
+      run: |
+        echo "### Grading Result" >> $GITHUB_STEP_SUMMARY
+        echo "**Points Awarded:** $points_awarded / $points_available" >> $GITHUB_STEP_SUMMARY
+
+    - name: Display result file (for debug)
+      if: always()
+      run: cat output/result.txt
